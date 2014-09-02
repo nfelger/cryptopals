@@ -1,7 +1,7 @@
 from itertools import izip_longest
 
 
-def hex2bytes(hex_string):
+def hex_decode(hex_string):
     pairs = izip_longest(*[iter(hex_string)]*2)
 
     result = bytearray()
@@ -55,7 +55,25 @@ def base64encode(ascii_string):
     return str(result)
 
 
+def fixed_length_xor(a, b):
+    a = bytearray(a)
+    b = bytearray(b)
+    result = bytearray()
+
+    for a_char, b_char in zip(a, b):
+        result.append(a_char ^ b_char)
+
+    return result
+
+
 def test_s1c1():
-    input = '49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d'
+    input = hex_decode('49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d')
     expected = 'SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t'
-    assert base64encode(hex2bytes(input)) == expected
+    assert base64encode(input) == expected
+
+
+def test_s1c2():
+    input1 = hex_decode('1c0111001f010100061a024b53535009181c')
+    input2 = hex_decode('686974207468652062756c6c277320657965')
+    expected = hex_decode('746865206b696420646f6e277420706c6179')
+    assert fixed_length_xor(input1, input2) == expected
