@@ -73,14 +73,14 @@ def fixed_length_xor(a, b):
 
 def find_single_byte_xor_key(ciphertext):
     ciphertext = bytearray(ciphertext)
-    best_candidate = (-1, -1)
+    best_candidate = (None, -1, -1)
     for candidate in range(33, 127):
         decoded = single_byte_xor(ciphertext, candidate)
         score = score_character_frequency(decoded)
-        if score > best_candidate[1]:
-            best_candidate = (candidate, score)
+        if score > best_candidate[2]:
+            best_candidate = (decoded, chr(candidate), score)
 
-    return chr(best_candidate[0])
+    return best_candidate
 
 
 def single_byte_xor(input, key):
@@ -116,6 +116,19 @@ def test_s1c3():
     input = hex_decode('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736')
     expected_key = 'X'
     expected_plaintext = "Cooking MC's like a pound of bacon"
-    found_key = find_single_byte_xor_key(input)
-    decoded_plaintext = str(single_byte_xor(input, ord(found_key)))
+    decoded_plaintext, found_key, _ = find_single_byte_xor_key(input)
     assert (found_key, decoded_plaintext) == (expected_key, expected_plaintext)
+
+def test_s1c4():
+    with open('data-1-4.txt') as file:
+        inputs = [hex_decode(l.strip()) for l in file.readlines()]
+
+    expected_plaintext = "Now that the party is jumping\n"
+
+    decoded_inputs = []
+    for input in inputs:
+        decoded, key, score = find_single_byte_xor_key(input)
+        decoded_inputs.append((decoded, score))
+
+    best_plaintext = sorted(decoded_inputs, key=lambda (decoded, score): score)[-1][0]
+    assert best_plaintext == expected_plaintext
