@@ -1,4 +1,9 @@
 from itertools import izip_longest
+import json
+import re
+
+with open('charfreqscores.json', 'r') as file:
+    CHARACTER_FREQUENCY_SCORES = json.load(file)
 
 
 def hex_decode(hex_string):
@@ -49,7 +54,7 @@ def base64encode(ascii_string):
                 raise Exception('bad base-64 int %s for block %s' % (c, block))
 
         # For every 0-padding byte, overwrite a trailing character with '='.
-        for n in xrange(1, num_missing + 1):
+        for n in range(1, num_missing + 1):
             result[-n] = '='
 
     return str(result)
@@ -66,6 +71,35 @@ def fixed_length_xor(a, b):
     return result
 
 
+def find_single_byte_xor_key(ciphertext):
+    ciphertext = bytearray(ciphertext)
+    best_candidate = (-1, -1)
+    for candidate in range(33, 127):
+        decoded = single_byte_xor(ciphertext, candidate)
+        score = score_character_frequency(decoded)
+        if score > best_candidate[1]:
+            best_candidate = (candidate, score)
+
+    return chr(best_candidate[0])
+
+
+def single_byte_xor(input, key):
+    return fixed_length_xor(input, [key] * len(input))
+
+
+def score_character_frequency(input):
+    input = str(input)
+
+    score = 0
+    for char in input:
+        char = char.lower()
+        if re.match('[a-z ]', char):
+            score += CHARACTER_FREQUENCY_SCORES[char]
+
+    length_normalized_score = score / len(input)
+    return length_normalized_score
+
+
 def test_s1c1():
     input = hex_decode('49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d')
     expected = 'SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t'
@@ -77,3 +111,11 @@ def test_s1c2():
     input2 = hex_decode('686974207468652062756c6c277320657965')
     expected = hex_decode('746865206b696420646f6e277420706c6179')
     assert fixed_length_xor(input1, input2) == expected
+
+def test_s1c3():
+    input = hex_decode('1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736')
+    expected_key = 'X'
+    expected_plaintext = "Cooking MC's like a pound of bacon"
+    found_key = find_single_byte_xor_key(input)
+    decoded_plaintext = str(single_byte_xor(input, ord(found_key)))
+    assert (found_key, decoded_plaintext) == (expected_key, expected_plaintext)
